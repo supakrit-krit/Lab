@@ -101,6 +101,7 @@ sudo nano /etc/fstab
 
 >Reference: 
 >1.	https://bluexp.netapp.com/blog/azure-anf-blg-linux-nfs-server-how-to-set-up-server-and-client
+>2.	https://documentation.suse.com/sles/15-SP6/html/SLES-all/cha-autofs.html
 
 #### Problem
 - Users on the client machine are inheriting UID-based permissions from the server.
