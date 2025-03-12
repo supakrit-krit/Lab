@@ -1,5 +1,11 @@
 Lab
 ======
 
-Lab1: NFS, FreeIPA
+- Lab0: commands
+- Lab1: NFS, FreeIPA
+
+Backlog
 ------
+
+- Grafana, Prometheus
+- notify
