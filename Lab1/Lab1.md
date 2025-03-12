@@ -233,5 +233,7 @@ session    required                                     pam_mkhomedir.so skel=/e
 HW
 ------
 
-ssh
-sudoer
+- nfs quota
+- nfs access control list
+- ssh passwordless: public key authen
+- sudoer on freeIPA
