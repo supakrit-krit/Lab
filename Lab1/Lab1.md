@@ -99,9 +99,10 @@ systemctl restart autofs
 sudo nano /etc/fstab
 
 
->Reference: 
+>References: 
 >1.	https://bluexp.netapp.com/blog/azure-anf-blg-linux-nfs-server-how-to-set-up-server-and-client
 >2.	https://documentation.suse.com/sles/15-SP6/html/SLES-all/cha-autofs.html
+>3.	https://www.digitalocean.com/community/tutorials/how-to-set-up-an-nfs-mount-on-rocky-linux-9
 
 #### Problem
 - Users on the client machine are inheriting UID-based permissions from the server.
@@ -195,6 +196,22 @@ Disscussion
 | **Best For**          | ✔ Small setups, testing environments | ✔ Production, enterprise, high-security needs |
 
 
->Reference: 
+>References: 
 >1.	https://www.freeipa.org/page/Quick_Start_Guide
 >2. https://www.linode.com/docs/guides/freeipa-for-identity-management/
+
+
+Important
+======
+
+Disable SELinux at /etc/selinux/config
+
+``` txt
+SELINUX=disabled 
+```
+
+config PAM at /etc/pam.d/password-auth and /etc/pam.d/system-auth at the line before revoke
+
+``` txt
+session    required                                     pam_mkhomedir.so skel=/etc/skel/ umask=0077
+```
