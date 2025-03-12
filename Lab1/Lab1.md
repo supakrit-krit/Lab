@@ -204,6 +204,20 @@ Disscussion
 Important
 ======
 
+#### commands
+
+``` bash
+# check mount path
+df -h
+# clear cache
+systemctl stop sssd ; rm -rf /var/lib/sss/db/* ; systemctl restart sssd
+# restart
+systemctl daemon-reload
+nfsstat -c
+umount <mounnt-path>
+mount -o remount /share/home/
+```
+
 Disable SELinux at /etc/selinux/config
 
 ``` txt
