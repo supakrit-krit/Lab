@@ -216,6 +216,7 @@ systemctl daemon-reload
 nfsstat -c
 umount <mounnt-path>
 mount -o remount /share/home/
+chgrp <group-name> <path>
 ```
 
 Disable SELinux at /etc/selinux/config
