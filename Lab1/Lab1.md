@@ -233,7 +233,17 @@ session    required                                     pam_mkhomedir.so skel=/e
 HW
 ------
 
+- /home: 100G thin LVM share
 - nfs quota
 - nfs access control list
 - ssh passwordless: public key authen
 - sudoer on freeIPA
+- Grafana, Prometheus, node-exporter
+- Notify
+- HPC Architecture
+    - Head node
+        - FreeIPA
+        - NFS Server
+        - 2 Network (public, private)
+    - Compute node
+        - only private network
