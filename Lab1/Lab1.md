@@ -229,3 +229,9 @@ config PAM at /etc/pam.d/password-auth and /etc/pam.d/system-auth at the line be
 ``` txt
 session    required                                     pam_mkhomedir.so skel=/etc/skel/ umask=0077
 ```
+
+HW
+------
+
+ssh
+sudoer
