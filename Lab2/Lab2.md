@@ -5,9 +5,9 @@ Requirements
 ------
 
 - /home: 100G thin LVM share
+- ssh passwordless: public key authen
 - nfs quota
 - nfs access control list
-- ssh passwordless: public key authen
 - sudoer on freeIPA
 - Grafana, Prometheus, node-exporter
 - Notify
@@ -155,4 +155,45 @@ chown -R prometheus:prometheus /var/lib/prometheus/
 systemctl daemon-reload
 systemctl start prometheus
 systemctl enable prometheus
+```
+
+NFS quota (TODO)
+------
+
+``` bash
+dnf install quota quotatool -y
+
+```
+
+SSH passwordless: public key authen [tutorial](https://www.informaticar.net/password-less-authetication-on-centos-red-hat/)
+------
+
+At host
+
+``` bash
+ssh-keygen -t rsa -C ipa1@ipa.test
+# put in FreeIPA
+cat ~/.ssh/id_rsa_lab2_ipa1.pub
+chmod 600 ~/.ssh/id_rsa_lab2_ipa1
+# using ssh -v ipa1@head for verbose
+.ssh % ssh -i ~/.ssh/id_rsa_lab2 ipa1@head
+# if done ~/.ssh/config config
+ssh ipa1
+```
+
+~/.ssh/config
+
+``` txt
+Host ipa1
+	HostName head.ipa.test
+	User ipa1
+	IdentityFile ~/.ssh/id_rsa_lab2_ipa1
+	IdentitiesOnly yes
+
+Host ipa2
+        HostName head.ipa.test
+        User ipa2
+        IdentityFile ~/.ssh/id_rsa_lab2_ipa2
+	IdentitiesOnly yes
+
 ```
