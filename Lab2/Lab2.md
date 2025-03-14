@@ -6,17 +6,23 @@ Requirements
 
 - /home: 100G thin LVM share
 - ssh passwordless: public key authen
+- HPC Architecture
+    - Head node
+        - FreeIPA        - NFS Server
+        - 2 Network (public, private) 
+        ``` bash
+        nmtui
+        ```
+    - Compute node
+        - only private network
 - nfs quota
+
+TODO
+
 - nfs access control list
 - sudoer on freeIPA
 - Grafana, Prometheus, node-exporter
 - Notify
-- HPC Architecture
-    - Head node
-        - FreeIPA        - NFS Server
-        - 2 Network (public, private)
-    - Compute node
-        - only private network
 
 Head Node (192.168.30.141): head:lab2password
     - Having FreeIPA, NFS Server
@@ -42,10 +48,13 @@ Create LVM
 # Create LVM with NVMe thin disk 100G
 echo "Setting up LVM on NVMe disk..."
 pvcreate /dev/nvme0n2
-vgcreate vg_home /dev/nvme0n2
-lvcreate -L 10G -T vg_home/thinpool
-lvcreate -V 10G -T vg_home/thinpool -n lv_home
-mkfs.xfs /dev/vg_home/lv_home
+# rename using vgrename old new
+vgcreate vg_share /dev/nvme0n2
+# lvremove /dev/vg_share/projects
+# lvchange -ay vg_share/lv_projects
+lvcreate -L 10G -T vg_share/home
+lvcreate -V 10G -T vg_share/home -n lv_home
+mkfs.xfs /dev/vg_share/lv_home
 mkdir -p /share/home
 mount /dev/vg_home/lv_home /share/home
 ```
@@ -157,14 +166,6 @@ systemctl start prometheus
 systemctl enable prometheus
 ```
 
-NFS quota (TODO)
-------
-
-``` bash
-dnf install quota quotatool -y
-
-```
-
 SSH passwordless: public key authen [tutorial](https://www.informaticar.net/password-less-authetication-on-centos-red-hat/)
 ------
 
@@ -196,4 +197,29 @@ Host ipa2
         IdentityFile ~/.ssh/id_rsa_lab2_ipa2
 	IdentitiesOnly yes
 
+```
+
+sudoer on freeIPA (tutorial)[https://freeipa.readthedocs.io/en/latest/workshop/8-sudorule.html]
+-----
+
+
+NFS quota [tutorial](https://reintech.io/blog/setting-up-disk-quotas-rocky-linux-9)
+------
+
+``` bash
+dnf install quota -y
+# Assigning Quotas
+edquota -u username
+edquota -g groupname
+# Enabling Quotas
+quotaon -v /share/home
+# Verifying Quotas
+quota -u username
+quota -g groupname
+# generate a report on all quotas
+repquota /share/home
+# Automating Quota Checks
+crontab -e
+# Add the following line to check daily
+0 0 * * * /sbin/quotacheck -avug
 ```
