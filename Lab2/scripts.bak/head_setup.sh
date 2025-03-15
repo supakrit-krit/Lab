@@ -47,6 +47,9 @@ echo "/share/projects 10.10.10.0/24(rw,sync,no_root_squash)" >> /etc/exports
 
 echo "Setting up firewall rules for NFS..."
 firewall-cmd --permanent --add-service=nfs
+firewall-cmd --permanent --add-service=rpc-bind
+firewall-cmd --permanent --add-service=mountd
+firewall-cmd --reload
 firewall-cmd --reload
 
 echo "Starting RPC and exporting NFS shares..."

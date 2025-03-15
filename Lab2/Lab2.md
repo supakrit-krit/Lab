@@ -12,6 +12,9 @@ Requirements
         - 2 Network (public, private) 
         ``` bash
         nmtui
+        # commands
+        nmcli device status
+        sudo nmcli device connect ens256
         ```
     - Compute node
         - only private network
@@ -59,8 +62,93 @@ mkdir -p /share/home
 mount /dev/vg_home/lv_home /share/home
 ```
 
+SSH passwordless: public key authen [tutorial](https://www.informaticar.net/password-less-authetication-on-centos-red-hat/)
+------
+
+At host
+
+``` bash
+ssh-keygen -t rsa -C ipa1@ipa.test
+# put in FreeIPA
+cat ~/.ssh/id_rsa_lab2_ipa1.pub
+chmod 600 ~/.ssh/id_rsa_lab2_ipa1
+# using ssh -v ipa1@head for verbose
+.ssh % ssh -i ~/.ssh/id_rsa_lab2 ipa1@head
+# if done ~/.ssh/config config
+ssh ipa1
+```
+
+~/.ssh/config
+
+``` txt
+Host ipa1
+	HostName head.ipa.test
+	User ipa1
+	IdentityFile ~/.ssh/id_rsa_lab2_ipa1
+	IdentitiesOnly yes
+
+Host ipa2
+        HostName head.ipa.test
+        User ipa2
+        IdentityFile ~/.ssh/id_rsa_lab2_ipa2
+	IdentitiesOnly yes
+
+```
+
+sudoer on freeIPA (tutorial)[https://freeipa.readthedocs.io/en/latest/workshop/8-sudorule.html]
+-----
+
+
+NFS quota [tutorial](https://reintech.io/blog/setting-up-disk-quotas-rocky-linux-9)
+------
+
+``` bash
+dnf install quota -y
+# Assigning Quotas
+edquota -u username
+edquota -g groupname
+# Enabling Quotas
+quotaon -v /share/home
+# Verifying Quotas
+quota -u username
+quota -g groupname
+# generate a report on all quotas
+repquota /share/home
+# Automating Quota Checks
+crontab -e
+# Add the following line to check daily
+0 0 * * * /sbin/quotacheck -avug
+```
+
+NFS access control list (?!??!!??!?!?!?!??)
+------
+
+At client
+
+``` bash
+dnf install nfs4-acl-tools
+nfs4_getfacl /share/home
+# Example 1: Give User ipa1 Full Permissions
+nfs4_setfacl -a "A::ipa1@ipa.test:rwx" /share/home
+# Example 2: Grant Group group1 Read & Execute
+nfs4_setfacl -a "A::developers@domain.com:rx" /mnt/nfs/home
+# Clear all ACLs
+nfs4_setfacl -c /share/home
+# Remove john's write access:
+nfs4_setfacl -x "A::john@domain.com" /mnt/nfs/home
+```
+
+> References:
+> 1. https://learn.microsoft.com/en-us/azure/azure-netapp-files/nfs-access-control-lists
+
+sudoer on freeIPA (TODO)
+------
+
+
 Grafana, Prometheus, node-exporter [tutorial](https://ozwizard.medium.com/how-to-install-and-configure-prometheus-grafana-on-rhel9-a23085992e6e)
 ------
+
+##### Grafana
 
 ``` bash
 wget -q -O gpg.key https://rpm.grafana.com/gpg.key
@@ -94,7 +182,7 @@ systemctl status grafana-server
 # port 3000,default username and password admin
 ```
 
-Prometheus
+##### Prometheus
 
 Add user prometheus with shell /sbin/nologin
 
@@ -166,60 +254,6 @@ systemctl start prometheus
 systemctl enable prometheus
 ```
 
-SSH passwordless: public key authen [tutorial](https://www.informaticar.net/password-less-authetication-on-centos-red-hat/)
-------
+##### node-exporter (TODO)
 
-At host
-
-``` bash
-ssh-keygen -t rsa -C ipa1@ipa.test
-# put in FreeIPA
-cat ~/.ssh/id_rsa_lab2_ipa1.pub
-chmod 600 ~/.ssh/id_rsa_lab2_ipa1
-# using ssh -v ipa1@head for verbose
-.ssh % ssh -i ~/.ssh/id_rsa_lab2 ipa1@head
-# if done ~/.ssh/config config
-ssh ipa1
-```
-
-~/.ssh/config
-
-``` txt
-Host ipa1
-	HostName head.ipa.test
-	User ipa1
-	IdentityFile ~/.ssh/id_rsa_lab2_ipa1
-	IdentitiesOnly yes
-
-Host ipa2
-        HostName head.ipa.test
-        User ipa2
-        IdentityFile ~/.ssh/id_rsa_lab2_ipa2
-	IdentitiesOnly yes
-
-```
-
-sudoer on freeIPA (tutorial)[https://freeipa.readthedocs.io/en/latest/workshop/8-sudorule.html]
------
-
-
-NFS quota [tutorial](https://reintech.io/blog/setting-up-disk-quotas-rocky-linux-9)
-------
-
-``` bash
-dnf install quota -y
-# Assigning Quotas
-edquota -u username
-edquota -g groupname
-# Enabling Quotas
-quotaon -v /share/home
-# Verifying Quotas
-quota -u username
-quota -g groupname
-# generate a report on all quotas
-repquota /share/home
-# Automating Quota Checks
-crontab -e
-# Add the following line to check daily
-0 0 * * * /sbin/quotacheck -avug
-```
+##### notify (TODO)
