@@ -23,8 +23,8 @@ Requirements
 TODO
 
 - nfs access control list
-- sudoer on freeIPA
 - Grafana, Prometheus, node-exporter
+- sudoer on freeIPA
 - Notify
 
 Head Node (192.168.30.141): head:lab2password
@@ -143,6 +143,35 @@ nfs4_setfacl -x "A::john@domain.com" /mnt/nfs/home
 
 sudoer on freeIPA (TODO)
 ------
+
+``` bash
+# Check if you have a valid Kerberos ticket:
+klist
+kinit admin
+# enable allow_all using UI
+ipa hbacrule-disable allow_all
+ipa hbacrule-show allow_all
+ipa hbacrule-find
+# ipa sudorule-find
+ipa hbacrule-show allow_sudo
+# ipa sudorule-show ipa-sudo
+# ipa group-show groupsudo
+sudo rm -rf /var/lib/sss/db/*
+sudo systemctl restart sssd
+[ipa3@com1 ~]$ sudo -l
+[sudo] password for ipa3: 
+Matching Defaults entries for ipa3 on com1:
+    !visiblepw, always_set_home, match_group_by_gid, always_query_group_plugin,
+    env_reset, env_keep="COLORS DISPLAY HOSTNAME HISTSIZE KDEDIR LS_COLORS",
+    env_keep+="MAIL PS1 PS2 QTDIR USERNAME LANG LC_ADDRESS LC_CTYPE",
+    env_keep+="LC_COLLATE LC_IDENTIFICATION LC_MEASUREMENT LC_MESSAGES",
+    env_keep+="LC_MONETARY LC_NAME LC_NUMERIC LC_PAPER LC_TELEPHONE",
+    env_keep+="LC_TIME LC_ALL LANGUAGE LINGUAS _XKB_CHARSET XAUTHORITY",
+    secure_path=/sbin\:/bin\:/usr/sbin\:/usr/bin
+
+User ipa3 may run the following commands on com1:
+    (%groupsudo, admin : groupsudo) ALL
+```
 
 
 Grafana, Prometheus, node-exporter [tutorial](https://ozwizard.medium.com/how-to-install-and-configure-prometheus-grafana-on-rhel9-a23085992e6e)
