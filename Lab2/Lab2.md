@@ -353,7 +353,25 @@ WantedBy=multi-user.target
 
 ``` bash
 # if com1.ipa.test chronyd[881]: Detected falseticker
+vi /etc/chrony.conf # at server
+server time.google.com iburst
+server 0.pool.ntp.org iburst
+server 1.pool.ntp.org iburst
+allow 10.10.10.0/24
+local stratum 2
+# at client
+server head iburst
+
+chronyc sources -v
+Reference ID    : 0A0A0A82 (head.ipa.test)
+
+local stratum 10
+
 sudo systemctl restart chronyd
 sudo systemctl enable chronyd
 ```
+
+[References](https://jhooq.com/prometheous-grafan-setup/)
+
+
 ##### notify (TODO)
