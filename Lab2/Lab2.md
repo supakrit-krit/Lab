@@ -23,8 +23,8 @@ Requirements
 TODO
 
 - nfs access control list
-- Grafana, Prometheus, node-exporter
 - sudoer on freeIPA
+- Grafana, Prometheus, node-exporter
 - Notify
 
 Head Node (192.168.30.141): head:lab2password
@@ -173,6 +173,28 @@ User ipa3 may run the following commands on com1:
     (%groupsudo, admin : groupsudo) ALL
 ```
 
+SSH passwordless error (try check)
+
+``` bash
+# create hbacrule allow_ssh
+# vi /etc/ssh/sshd_config
+AuthorizedKeysCommand /usr/bin/sss_ssh_authorizedkeys
+AuthorizedKeysCommandUser nobody
+# vi /etc/security/access.conf
++:ALL:ALL
+# vi /etc/sssd/sssd.conf
+[domain/ipa.test]
+debug_level = 9
+[pam]
+pam_cert_auth = True
+pam_id_timeout = 5
+pam_account_expired = True
+# vi /etc/pam.d/sshd 
+auth    required        pam_sss.so
+account required pam_sss.so
+rm -rf /var/lib/sss/db/*
+systemctl restart sssd sshd
+```
 
 Grafana, Prometheus, node-exporter [tutorial](https://ozwizard.medium.com/how-to-install-and-configure-prometheus-grafana-on-rhel9-a23085992e6e)
 ------
@@ -209,6 +231,7 @@ systemctl enable grafana-server
 systemctl start grafana-server
 systemctl status grafana-server
 # port 3000,default username and password admin
+# grafana-cli admin reset-admin-password admin
 ```
 
 ##### Prometheus
@@ -283,6 +306,54 @@ systemctl start prometheus
 systemctl enable prometheus
 ```
 
-##### node-exporter (TODO)
+##### node-exporter [tutorial](https://rm-rf.medium.com/install-node-exporter-for-prometheus-grafana-d0ec29b8a2b6)
 
+``` bash
+wget https://github.com/prometheus/node_exporter/releases/download/v1.5.0/node_exporter-1.5.0.linux-arm64.tar.gz
+tar -xf node_exporter-1.5.0.linux-arm64.tar.gz
+sudo mv node_exporter-1.5.0.linux-arm64/node_exporter /usr/local/bin
+rm -r node_exporter-1.5.0.linux-arm64*
+sudo useradd -rs /bin/false node_exporter
+vi /etc/systemd/system/node_exporter.service
+sudo systemctl daemon-reload
+sudo systemctl enable node_exporter
+sudo systemctl start node_exporter
+sudo systemctl status node_exporter
+sudo firewall-cmd --permanent --add-port=9100/tcp
+sudo firewall-cmd --reload
+```
+
+At head
+
+``` bash
+vi /opt/prometheus-2.37.9.linux-arm64/prometheus.yml
+systemctl restart prometheus.service
+
+```
+
+``` txt
+    static_configs:
+      - targets: ["head:9090", "com1:9100"]
+```
+
+``` txt
+[Unit]
+Description=Node Exporter
+After=network.target
+
+[Service]
+User=node_exporter
+Group=node_exporter
+Type=simple
+ExecStart=/usr/local/bin/node_exporter
+
+[Install]
+WantedBy=multi-user.target
+```
+
+``` bash
+# if com1.ipa.test chronyd[881]: Detected falseticker
+sudo systemctl restart chronyd
+sudo systemctl enable chronyd
+```
 ##### notify (TODO)
