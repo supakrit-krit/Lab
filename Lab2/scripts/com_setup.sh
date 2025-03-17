@@ -49,18 +49,21 @@ echo "Configuring the firewall..."
 firewall-cmd --permanent --add-service=freeipa-ldap
 firewall-cmd --permanent --add-service=freeipa-ldaps
 firewall-cmd --add-service=dns --permanent
+
+sudo firewall-cmd --permanent --add-service={http,https,ldap,ldaps,kerberos,kpasswd,ntp}
+firewall-cmd --permanent --add-port={80/tcp,443/tcp,389/tcp,636/tcp,88/tcp,464/tcp,53/tcp,88/udp,464/udp,53/udp,123/udp}
 firewall-cmd --reload
 
-# Run the FreeIPA client installation
-# ipa-client-install \
-#   --hostname=com1.ipa.test \
-#   --mkhomedir \
-#   --server=head.ipa.test \
-#   --domain=ipa.test \
-#   --realm=IPA.TEST \
-#   --principal=admin \
-#   --password=lab2password \
-#   --enable-dns-updates -U
+# ## Run the FreeIPA client installation
+ipa-client-install \
+  --hostname=com2.ipa.test \
+  --mkhomedir \
+  --server=head.ipa.test \
+  --domain=ipa.test \
+  --realm=IPA.TEST \
+  --principal=admin \
+  --password=lab2password \
+  --enable-dns-updates -U
 echo "Running ipa-client-install..."
 ipa-client-install \
   --hostname=${HOSTNAME} \

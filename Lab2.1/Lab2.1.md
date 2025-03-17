@@ -1,100 +1,99 @@
-Lab2: HPC
+Lab2.1: HPC Fix
 =========
 
 Requirements
 ------
 
-- /home: 100G thin LVM share
+Fix
+
 - ssh passwordless: public key authen
-- HPC Architecture
-    - Head node
-        - FreeIPA        - NFS Server
-        - 2 Network (public, private) 
-        ``` bash
-        nmtui
-        # commands
-        nmcli device status
-        sudo nmcli device connect ens256
-        ```
-    - Compute node
-        - only private network
-- nfs quota
+- sudoer on freeIPA
 
 TODO
 
+- nfs quota
 - nfs access control list
-- sudoer on freeIPA
+    - projects structure
 - Grafana, Prometheus, node-exporter
-- Notify
 
-Head Node (192.168.30.141): head:lab2password
+Head Node (192.168.30.142): head:lab2password
     - Having FreeIPA, NFS Server
 
-LVM
-------
+- Q: Logival volumn and Virtual volumn [reference](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/6/html/logical_volume_manager_administration/thinly_provisioned_volume_creation#thinly_provisioned_volume_creation)
 
-Q: [Thick and Thin Provisioning: What Is the Difference?](https://www.nakivo.com/blog/thick-and-thin-provisioning-difference/)
+Note that in this case you are specifying virtual size, and that you are specifying a virtual size for the volume that is greater than the pool that contains it.
 
-- Thick provisioning is a type of storage pre-allocation. With thick provisioning, the complete amount of virtual disk storage capacity is pre-allocated on the physical storage when the virtual disk is created. A thick-provisioned virtual disk consumes all the space allocated to it in the datastore right from the start, so the space is unavailable for use by other virtual machines.
+You can extend the size of a thin volume with the lvextend command. You cannot, however, reduce the size of a thin pool.
 
-- Thin provisioning is another type of storage pre-allocation. A thin-provisioned virtual disk consumes only the space that it needs initially, and grows with time according to demand. For example, if you create a new thin-provisioned 30GB virtual disk and copy 10 GB of files to it, the size of the resulting VMDK file will be 10 GB, whereas you would have a 30GB VMDK file if you had chosen to use a thick-provisioned disk.
-
-
->Reference: 
->1.	https://datarecoverylab.wordpress.com/2010/05/09/hard-drive-bus-types-scsi-sata-esata-ide-sas-and-firewire-ieee-1394/
-
-
-Create LVM
-------
+``` 
+# lvcreate -L 100M -T vg001/mythinpool
+  Rounding up size to full physical extent 4.00 MiB
+  Logical volume "mythinpool" created
+# lvs
+  LV            VG     Attr     LSize   Pool Origin Data%  Move Log Copy% Convert
+  my mythinpool vg001  twi-a-tz 100.00m               0.00
+# lvcreate -V1G -T vg001/mythinpool -n thinvolume
+  Logical volume "thinvolume" created
+# lvs
+  LV          VG       Attr     LSize   Pool       Origin Data%  Move Log Copy%  Convert
+  mythinpool  vg001    twi-a-tz 100.00m                     0.00                        
+  thinvolume  vg001    Vwi-a-tz   1.00g mythinpool          0.00
+```
 
 ``` bash
-# Create LVM with NVMe thin disk 100G
-echo "Setting up LVM on NVMe disk..."
-pvcreate /dev/nvme0n2
-# rename using vgrename old new
-vgcreate vg_share /dev/nvme0n2
-# lvremove /dev/vg_share/projects
-# lvchange -ay vg_share/lv_projects
-lvcreate -L 10G -T vg_share/home
-lvcreate -V 10G -T vg_share/home -n lv_home
-mkfs.xfs /dev/vg_share/lv_home
-mkdir -p /share/home
+# deactivate
+lvchange -an vg_share/home
+lvremove vg_share/home
+# create thinpool(1G)
+lvcreate -L 1G -T vg_share/home
+# create thinvolumn(10G) inside thinpool(1G)
+lvcreate -V 10G -T vg_share/home -n home
+mkfs.xfs /dev/vg_share/home
 mount /dev/vg_share/lv_home /share/home
-# commands at https://www.redhat.com/en/blog/resize-lvm-simple
-lvextend -l +100%FREE /dev/centos/root.
+lvextend -l +100%FREE /dev/vg_share/home
+lvextend -L +1G /dev/vg_share/home
+```
+
+``` bash
+tar -czvf /bak/home.tar.gz /share/home
+tar -xvzf /bak/home.tar.gz -C /
 ```
 
 SSH passwordless: public key authen [tutorial](https://www.informaticar.net/password-less-authetication-on-centos-red-hat/)
 ------
 
-At host
+At M213
 
 ``` bash
-ssh-keygen -t rsa -C ipa1@ipa.test
-# put in FreeIPA
-cat ~/.ssh/id_rsa_lab2_ipa1.pub
-chmod 600 ~/.ssh/id_rsa_lab2_ipa1
-# using ssh -v ipa1@head for verbose
-.ssh % ssh -i ~/.ssh/id_rsa_lab2 ipa1@head
-# if done ~/.ssh/config config
-ssh ipa1
+ssh-keygen -t rsa
+chmod 600 ~/.ssh/m213
+chmod 600 ~/.ssh/m213.pub
+# (base) kitt@M213 .ssh % ls -al | grep m213   
+# -rw-------   1 kitt  staff   2602 Mar 17 14:03 m213
+# -rw-------   1 kitt  staff    569 Mar 17 14:03 m213.pub
+# copy src des
+scp m213.pub ipa1@head:.ssh/authorized_keys
+# OR on FreeIPA UI add m213.pub to ssh pub field
+# ssh -i <private-key> <user>@<host> after store .pub at head
+ssh -i m213 ipa3@head
 ```
 
-~/.ssh/config
+At head
 
-``` txt
-Host ipa1
-	HostName head.ipa.test
-	User ipa1
-	IdentityFile ~/.ssh/id_rsa_lab2_ipa1
-	IdentitiesOnly yes
-
-Host ipa2
-        HostName head.ipa.test
-        User ipa2
-        IdentityFile ~/.ssh/id_rsa_lab2_ipa2
-	IdentitiesOnly yes
-
+``` bash
+# at M213 -> store m213.pub to head (.ssh/authorized_keys)
+vi /etc/ssh/sshd_config
+## PubkeyAuthentication yes
+## AuthorizedKeysFile .ssh/authorized_keys
+# copy of m213.pub
+# check file name
+## mv m213.pub authorized_keys
+# check permission 
+## chmod 600 ~/.ssh/authorized_keys
+## FreeIPA
+# ssh-keygen -t rsa
+# store pub at IPA UI
+ssh com1
 ```
 
 sudoer on freeIPA (tutorial)[https://freeipa.readthedocs.io/en/latest/workshop/8-sudorule.html]
@@ -104,25 +103,66 @@ sudoer on freeIPA (tutorial)[https://freeipa.readthedocs.io/en/latest/workshop/8
 NFS quota [tutorial](https://reintech.io/blog/setting-up-disk-quotas-rocky-linux-9)
 ------
 
+At head fs: xfs
+
 ``` bash
-dnf install quota -y
-# Assigning Quotas
-edquota -u username
-edquota -g groupname
-# Enabling Quotas
-quotaon -v /share/home
+xfs_quota -x -c "quota enable" /share/home
+xfs_quota -x -c "state" /share/home
+xfs_quota -x -c "limit bsoft=15m bhard=20m ipa1" /share/home
+xfs_quota -x -c "report -h" /share/home
+# new user default
+xfs_quota -x -c "limit -d bsoft=15m bhard=20m" /share/home
+```
+
+``` example
+[root@head ~]# xfs_quota -x -c "report -h" /share/home
+User quota on /share/home (/dev/mapper/vg_share-home)
+                        Blocks              
+User ID      Used   Soft   Hard Warn/Grace   
+---------- --------------------------------- 
+root            0    15M    20M  00 [------]
+ipa1        15.5M    15M    20M  00 [7 days]
+ipa2          20K    15M    20M  00 [------]
+ipa3          20K    15M    20M  00 [------]
+ipa4         476K    15M    20M  00 [------]
+ipa5          16K    15M    20M  00 [------]
+
+<!-- The user has 7 days to reduce usage before they are completely blocked from writing new data -->
+
+[ipa1@head ~]$ fallocate -l 7M testfile2
+fallocate: fallocate failed: Disk quota exceeded
+```
+
+``` bash
+# Assigning Quotas - not working
+# edquota -u username
+# edquota -g groupname
+# # Enabling Quotas
+# quotaon -v /share/home
+# generate a report on all quotas
+# repquota /share/home
+
 # Verifying Quotas
 quota -u username
 quota -g groupname
-# generate a report on all quotas
-repquota /share/home
-# Automating Quota Checks
-crontab -e
-# Add the following line to check daily
-0 0 * * * /sbin/quotacheck -avug
+## [root@com1 ~]# quota -u ipa1
+# Disk quotas for user ipa1 (uid 737000003): 
+#      Filesystem  blocks   quota   limit   grace   files   quota   limit   grace
+# 10.10.10.130:/share/home
+#                   15860*  15360   20480   6days      26       0       0 
 ```
 
-NFS access control list (?!??!!??!?!?!?!??)
+[REF: du](https://cyberpanel.net/blog/check-size-of-the-directory-in-linux)
+``` bash
+# check folder size
+du -sh  ../ipa1
+# if=data-source
+dd if=/dev/zero of=testfile bs=1M count=10
+# Allocates 10MB of disk space without writing zeroes.
+fallocate -l 10M testfile
+```
+
+NFS access control list
 ------
 
 At client
@@ -179,29 +219,6 @@ Matching Defaults entries for ipa3 on com1:
 
 User ipa3 may run the following commands on com1:
     (%groupsudo, admin : groupsudo) ALL
-```
-
-SSH passwordless error (try check)
-
-``` bash
-# create hbacrule allow_ssh
-# vi /etc/ssh/sshd_config
-AuthorizedKeysCommand /usr/bin/sss_ssh_authorizedkeys
-AuthorizedKeysCommandUser nobody
-# vi /etc/security/access.conf
-+:ALL:ALL
-# vi /etc/sssd/sssd.conf
-[domain/ipa.test]
-debug_level = 9
-[pam]
-pam_cert_auth = True
-pam_id_timeout = 5
-pam_account_expired = True
-# vi /etc/pam.d/sshd 
-auth    required        pam_sss.so
-account required pam_sss.so
-rm -rf /var/lib/sss/db/*
-systemctl restart sssd sshd
 ```
 
 Grafana, Prometheus, node-exporter [tutorial](https://ozwizard.medium.com/how-to-install-and-configure-prometheus-grafana-on-rhel9-a23085992e6e)
@@ -382,4 +399,10 @@ sudo systemctl enable chronyd
 [References](https://jhooq.com/prometheous-grafan-setup/)
 
 
-##### notify (TODO)
+
+Commands
+------
+
+``` bash
+systemctl stop sssd ; rm -rf /var/lib/sss/db/* ; systemctl restart sssd
+```
