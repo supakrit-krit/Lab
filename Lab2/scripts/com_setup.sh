@@ -27,8 +27,8 @@ echo "${COM_IP} ${COM_NAME}.ipa.test ${COM_NAME}" >> /etc/hosts
 dnf install -y nfs-utils
 
 mkdir -p /share/home
-chmod 770 /share
-chmod 770 /share/home
+# chmod 770 /share
+# chmod 770 /share/home
 
 echo "${HEAD_IP}:/share/home /share/home nfs defaults 0 0" >> /etc/fstab
 echo "${HEAD_IP}:/share/projects /share/projects nfs defaults 0 0" >> /etc/fstab

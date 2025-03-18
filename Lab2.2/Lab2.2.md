@@ -1,101 +1,19 @@
-Lab2.1: HPC Fix
+Lab2.1: HPC Add
 =========
 
 Requirements
 ------
 
-Fix
-
-- ssh passwordless: public key authen
-- sudoer on freeIPA
-- nfs quota
-- nfs access control list
-    - projects structure
-- Grafana, Prometheus, node-exporter
+- Dashboard: 
+  - prometheus: alert rule -> any option (gmail,..)
+  - grafana: x:time, y:node
+- nfs quota: enable
+- nfs access control list:
+  - non-root setting
+  - apply quota
 
 Head Node (192.168.30.142): head:lab2password
     - Having FreeIPA, NFS Server
-
-- Q: Logival volumn and Virtual volumn [reference](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/6/html/logical_volume_manager_administration/thinly_provisioned_volume_creation#thinly_provisioned_volume_creation)
-
-Note that in this case you are specifying virtual size, and that you are specifying a virtual size for the volume that is greater than the pool that contains it.
-
-You can extend the size of a thin volume with the lvextend command. You cannot, however, reduce the size of a thin pool.
-
-``` 
-# lvcreate -L 100M -T vg001/mythinpool
-  Rounding up size to full physical extent 4.00 MiB
-  Logical volume "mythinpool" created
-# lvs
-  LV            VG     Attr     LSize   Pool Origin Data%  Move Log Copy% Convert
-  my mythinpool vg001  twi-a-tz 100.00m               0.00
-# lvcreate -V1G -T vg001/mythinpool -n thinvolume
-  Logical volume "thinvolume" created
-# lvs
-  LV          VG       Attr     LSize   Pool       Origin Data%  Move Log Copy%  Convert
-  mythinpool  vg001    twi-a-tz 100.00m                     0.00                        
-  thinvolume  vg001    Vwi-a-tz   1.00g mythinpool          0.00
-```
-
-``` bash
-# deactivate
-lvchange -an vg_share/home
-lvremove vg_share/home
-# create thinpool(1G)
-lvcreate -L 1G -T vg_share/home
-# create thinvolumn(10G) inside thinpool(1G)
-lvcreate -V 10G -T vg_share/home -n home
-mkfs.xfs /dev/vg_share/home
-mount /dev/vg_share/lv_home /share/home
-lvextend -l +100%FREE /dev/vg_share/home
-lvextend -L +1G /dev/vg_share/home
-```
-
-``` bash
-tar -czvf /bak/home.tar.gz /share/home
-tar -xvzf /bak/home.tar.gz -C /
-```
-
-SSH passwordless: public key authen [tutorial](https://www.informaticar.net/password-less-authetication-on-centos-red-hat/)
-------
-
-At M213
-
-``` bash
-ssh-keygen -t rsa
-chmod 600 ~/.ssh/m213
-chmod 600 ~/.ssh/m213.pub
-# (base) kitt@M213 .ssh % ls -al | grep m213   
-# -rw-------   1 kitt  staff   2602 Mar 17 14:03 m213
-# -rw-------   1 kitt  staff    569 Mar 17 14:03 m213.pub
-# copy src des
-scp m213.pub ipa1@head:.ssh/authorized_keys
-# OR on FreeIPA UI add m213.pub to ssh pub field
-# ssh -i <private-key> <user>@<host> after store .pub at head
-ssh -i m213 ipa3@head
-```
-
-At head
-
-``` bash
-# at M213 -> store m213.pub to head (.ssh/authorized_keys)
-vi /etc/ssh/sshd_config
-## PubkeyAuthentication yes
-## AuthorizedKeysFile .ssh/authorized_keys
-# copy of m213.pub
-# check file name
-## mv m213.pub authorized_keys
-# check permission 
-## chmod 600 ~/.ssh/authorized_keys
-## FreeIPA
-# ssh-keygen -t rsa
-# store pub at IPA UI
-ssh com1
-```
-
-sudoer on freeIPA (tutorial)[https://freeipa.readthedocs.io/en/latest/workshop/8-sudorule.html]
------
-
 
 NFS quota [tutorial](https://reintech.io/blog/setting-up-disk-quotas-rocky-linux-9)
 ------
@@ -161,38 +79,6 @@ du -sh  ../ipa1
 dd if=/dev/zero of=testfile bs=1M count=10
 # Allocates 10MB of disk space without writing zeroes.
 fallocate -l 10M testfile
-```
-
-sudoer on freeIPA [tutorial](https://www.freeipa.org/page/Howto/HBAC_and_allow_all)
-------
-
-``` bash
-# Check if you have a valid Kerberos ticket:
-klist
-kinit admin
-#### enable allow_sudo(Sudoer) , allow_ssh(Passwordless) using UI
-# ipa hbacrule-disable allow_all
-# ipa hbacrule-show allow_all
-# ipa hbacrule-find
-# # ipa sudorule-find
-# ipa hbacrule-show allow_sudo
-# ipa sudorule-show ipa-sudo
-# ipa group-show groupsudo
-sudo rm -rf /var/lib/sss/db/*
-sudo systemctl restart sssd
-[ipa3@com1 ~]$ sudo -l
-[sudo] password for ipa3: 
-Matching Defaults entries for ipa3 on com1:
-    !visiblepw, always_set_home, match_group_by_gid, always_query_group_plugin,
-    env_reset, env_keep="COLORS DISPLAY HOSTNAME HISTSIZE KDEDIR LS_COLORS",
-    env_keep+="MAIL PS1 PS2 QTDIR USERNAME LANG LC_ADDRESS LC_CTYPE",
-    env_keep+="LC_COLLATE LC_IDENTIFICATION LC_MEASUREMENT LC_MESSAGES",
-    env_keep+="LC_MONETARY LC_NAME LC_NUMERIC LC_PAPER LC_TELEPHONE",
-    env_keep+="LC_TIME LC_ALL LANGUAGE LINGUAS _XKB_CHARSET XAUTHORITY",
-    secure_path=/sbin\:/bin\:/usr/sbin\:/usr/bin
-
-User ipa3 may run the following commands on com1:
-    (%groupsudo, admin : groupsudo) ALL
 ```
 
 Grafana, Prometheus, node-exporter [tutorial](https://ozwizard.medium.com/how-to-install-and-configure-prometheus-grafana-on-rhel9-a23085992e6e)
