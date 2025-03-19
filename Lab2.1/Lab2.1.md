@@ -78,6 +78,16 @@ ssh -i m213 ipa3@head
 At head
 
 ``` bash
+# nano /etc/krb5.conf
+# [libdefaults]
+#     ticket_lifetime = 24h
+#     renew_lifetime = 7d
+#     forwardable = true
+#     default_realm = IPA.TEST
+systemctl restart krb5kdc
+# To check the ticket lifetime and renewal settings for a specific user:
+ipa user-show <username>
+ipa user-mod <username> --krbmaxticketlife=24h --krbmaxrenewableage=7d
 # at M213 -> store m213.pub to head (.ssh/authorized_keys)
 vi /etc/ssh/sshd_config
 ## PubkeyAuthentication yes
@@ -386,10 +396,10 @@ nfs4_setfacl -x "A::ipa1@ipa.test" /mnt/nfs/home
 ```
 
 ```bash
-mkdir -p /share/projects/{.backup,01_quickShare,02_lecture,03_team1,04_team2,99_Archived}
+mkdir -p /share/projects/{.backup,00_guest,01_quickShare,02_lecture,03_team1,04_team2,99_Archived}
 mkdir -p /share/projects/.backup/{2503_projectName1,2503_projectName2}
 mkdir -p /share/projects/01_quickShare/{2503_projectName1,2503_projectName2}
-mkdir -p /share/projects/02_lecture/{2503_projectName1,2503_projectName2}
+mkdir -p /share/projects/02_lecture
 mkdir -p /share/projects/03_team1/{2503_projectName1,2503_projectName2,9999_Archived}
 mkdir -p /share/projects/04_team2/{2503_projectName1,2503_projectName2,9999_Archived}
 
@@ -399,20 +409,20 @@ setfacl -R -m g:team1:rwx /share/projects/03_team1/*
 
 # Allow team2 full access to 04_team2
 setfacl -m g:team2:rwx /share/projects/04_team2
+setfacl -m d:g:team1:rwx /share/projects/03_team1
 setfacl -R -m g:team2:rwx /share/projects/04_team2/*
 
 # Allow backup team full access to .backup
-setfacl -m g:groupsudo:rwx /share/projects/.backup
-setfacl -R -m g:groupsudo:rwx /share/projects/.backup/*
+setfacl -m g:ipa-sudo:rwx /share/projects/.backup
+setfacl -R -m g:ipa-sudo:rwx /share/projects/.backup/*
 
 # Allow lecture team access to 02_lecture
-setfacl -m g:lecture:rx /share/projects/02_lecture
-setfacl -R -m g:lecture:rx /share/projects/02_lecture/*
+setfacl -m g:lecturer:rx /share/projects/02_lecture
+setfacl -R -m g:lecturer:rx /share/projects/02_lecture/*
 
 # Allow everyone read/write access to 01_quickShare
 setfacl -m o:rwx /share/projects/01_quickShare
 setfacl -R -m o:rwx /share/projects/01_quickShare/*
-
 ```
 
 Projects structure
@@ -420,9 +430,9 @@ Projects structure
 ``` bash
 # root
 mkdir 02_lecture
-chown -R root:lecture 02_lecture
-setfacl -R -m g:lecture:rwx 02_lecture
-setfacl -R -m d:g:lecture:rwx 02_lecture
+chown -R lecturer:lecturer 02_lecture
+setfacl -R -m g:lecturer:rwx 02_lecture
+setfacl -R -m d:g:lecturer:rwx 02_lecture
 # lecture(ipa2)
 mkdir -p 02_lecture/01_introduction 02_lecture/02_basic 02_lecture/03_intermediate 02_lecture/04_advance 02_lecture/05_expert
 
@@ -440,26 +450,26 @@ echo "expert chap2" > 02_lecture/05_expert/02_chapter
 
 setfacl -m g:learner:r-x 02_lecture
 setfacl -m d:g:learner:--- 02_lecture
-# starter
-setfacl -m g:starter_lecture:r-x 02_lecture/01_introduction
-setfacl -m g:starter_lecture:r-x 02_lecture/02_basic
+# learn_starter
+setfacl -m g:learn_starter:r-x 02_lecture/01_introduction
+setfacl -m g:learn_starter:r-x 02_lecture/02_basic
 # --
-setfacl -m g:starter_lecture:0 02_lecture/03_intermediate
-setfacl -m g:starter_lecture:0 02_lecture/04_advance
-setfacl -m g:starter_lecture:0 02_lecture/05_expert
-# worker
-setfacl -m g:starter_lecture:r-x 02_lecture/01_introduction
-setfacl -m g:starter_lecture:r-x 02_lecture/02_basic
-setfacl -m g:starter_lecture:r-x 02_lecture/03_intermediate
-setfacl -m g:starter_lecture:r-x 02_lecture/04_advance
+setfacl -m g:learn_starter:0 02_lecture/03_intermediate
+setfacl -m g:learn_starter:0 02_lecture/04_advance
+setfacl -m g:learn_starter:0 02_lecture/05_expert
+# learn_intermediate
+setfacl -m g:learn_intermediate:r-x 02_lecture/01_introduction
+setfacl -m g:learn_intermediate:r-x 02_lecture/02_basic
+setfacl -m g:learn_intermediate:r-x 02_lecture/03_intermediate
+setfacl -m g:learn_intermediate:r-x 02_lecture/04_advance
 # --
-setfacl -m g:worker_lecture:0 02_lecture/05_expert
+setfacl -m g:learn_intermediate:0 02_lecture/05_expert
 # instructor
-setfacl -m g:starter_lecture:r-x 02_lecture/01_introduction
-setfacl -m g:starter_lecture:r-x 02_lecture/02_basic
-setfacl -m g:starter_lecture:r-x 02_lecture/03_intermediate
-setfacl -m g:starter_lecture:r-x 02_lecture/04_advance
-setfacl -m g:starter_lecture:r-x 02_lecture/05_expert
+setfacl -m g:learn_expert:r-x 02_lecture/01_introduction
+setfacl -m g:learn_expert:r-x 02_lecture/02_basic
+setfacl -m g:learn_expert:r-x 02_lecture/03_intermediate
+setfacl -m g:learn_expert:r-x 02_lecture/04_advance
+setfacl -m g:learn_expert:r-x 02_lecture/05_expert
 ```
 
 > References:

@@ -360,6 +360,7 @@ WantedBy=multi-user.target
 ```
 
 ``` bash
+chronyc sources -v
 # if com1.ipa.test chronyd[881]: Detected falseticker
 vi /etc/chrony.conf # at server
 server time.google.com iburst
