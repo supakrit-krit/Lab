@@ -7,7 +7,7 @@ Requirements
 - Dashboard: 
   - prometheus: alert rule -> any option (gmail,..)
   TODO
-  - grafana: x:time, y:node
+  - grafana: x:time, y:node amount
 
 ``` txt
 com1 192.168.1.169 10.10.10.128
@@ -451,10 +451,17 @@ alerting:
 # Check the Prometheus config syntax
 promtool check config /etc/prometheus/prometheus.yml
 killall -HUP prometheus
+# claer previous data
+
 systemctl restart prometheus
 ```
 
 ``` bash
+# at M213
+sudo systemsetup -getnetworktimeserver
+
+sudo timedatectl set-timezone Asia/Bangkok
+
 chronyc sources -v
 # if com1.ipa.test chronyd[881]: Detected falseticker
 vi /etc/chrony.conf # at server
@@ -474,3 +481,16 @@ local stratum 10
 sudo systemctl restart chronyd
 sudo systemctl enable chronyd
 ```
+
+
+HW
+
+- tmux
+- forward mail -> google, smtp
+- grafana y:nodes x:time
+- bonding: Network interface -> port 
+  - NIC teaming
+  - protocol: active backup
+  - expectation: LACP
+
+- 2 head nodes -> 1 virtual IP
