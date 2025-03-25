@@ -20,6 +20,9 @@ Requirements
 com1 192.168.1.169 10.10.10.128
 head 192.168.1.170 10.10.10.129
 com2 192.168.1.171 10.10.10.130
+head2 192.168.1.173 10.10.10.131
+
+VIP: 10.10.10.100
 
 local:lab3password
 ```
@@ -79,10 +82,10 @@ Forward to google
 
 vi /etc/alertmanager/alertmanager.yml 
 
-``` txt
+``` bash
 global:
   resolve_timeout: 5m
-  smtp_smarthost: 'smtp.gmail.com:587'
+  smtp_smarthost: 'smtp.gmail.com:587' # e.g., smtp.yourdomain.com:587
   smtp_from: 'supakrit.krit.work@gmail.com'
   smtp_auth_username: 'supakrit.krit.work@gmail.com'
   smtp_auth_password: 'uvsmwdfwjuzqxoug'
@@ -100,7 +103,7 @@ receivers:
     email_configs:
       - to: 'supakrit.krit.work@gmail.com'
         from: 'supakrit.krit.work@gmail.com'
-        send_resolved: true
+        send_resolved: false
 
 inhibit_rules:
   - source_match:
@@ -110,7 +113,15 @@ inhibit_rules:
     equal: ['alertname', 'instance']
 ```
 
+NodeUp Dashboard
+------
 
+``` txt
+count(up{job="node_exporter"} == 1)
+```
+
+Chrony
+------
 
 ``` bash
 # at M213
@@ -136,4 +147,127 @@ local stratum 10
 
 sudo systemctl restart chronyd
 sudo systemctl enable chronyd
+```
+
+Bonding mode=1
+------
+
+``` bash
+sudo dnf install -y NetworkManager teamd keepalived
+```
+
+head (master)
+
+``` bash
+sudo nmcli connection add type bond con-name bond0 ifname bond0 mode active-backup
+sudo nmcli connection add type ethernet con-name slave-ens256 ifname ens256 master bond0
+sudo nmcli connection add type ethernet con-name slave-ens161 ifname ens161 master bond0
+sudo nmcli connection modify bond0 ipv4.method manual ipv4.addresses 10.10.10.129/24
+sudo nmcli connection up bond0
+```
+
+head2 (backup)
+
+``` bash
+sudo nmcli connection add type bond con-name bond0 ifname bond0 mode active-backup
+sudo nmcli connection add type ethernet con-name slave-ens256 ifname ens256 master bond0
+sudo nmcli connection add type ethernet con-name slave-ens161 ifname ens161 master bond0
+sudo nmcli connection modify bond0 ipv4.method manual ipv4.addresses 10.10.10.131/24
+sudo nmcli connection up bond0
+```
+
+vi /etc/keepalived/keepalived.conf
+
+head (master)
+
+``` txt
+vrrp_instance VI_1 {
+    state MASTER
+    interface bond0
+    virtual_router_id 51
+    priority 100
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1111
+    }
+    unicast_src_ip 10.10.10.129
+    unicast_peer {
+        10.10.10.131
+    }
+    virtual_ipaddress {
+        10.10.10.100
+    }
+}
+```
+
+head2 (backup)
+
+``` txt
+vrrp_instance VI_1 {
+    state BACKUP
+    interface bond0
+    virtual_router_id 51
+    priority 90
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass 1111
+    }
+    unicast_src_ip 10.10.10.131
+    unicast_peer {
+        10.10.10.129
+    }
+    virtual_ipaddress {
+        10.10.10.100
+    }
+}
+```
+
+test
+
+``` bash
+cat /proc/net/bonding/bond0
+sudo ip link set ens161 down
+sudo ip link set ens161 up
+systemctl stop keepalived
+```
+
+Fix FreeIPA
+
+on head (primary)
+
+``` bash
+ipa-replica-prepare head2.ipa.test
+
+```
+
+on head2 (replica)
+
+``` bash
+ipa-client-install \
+  --hostname=head2.ipa.test \
+  --mkhomedir \
+  --server=head.ipa.test \
+  --domain=ipa.test \
+  --realm=IPA.TEST \
+  --principal=admin \
+  --password=lab3password \
+  --enable-dns-updates -U
+
+ipa-replica-install
+
+# Fix passwordless tiket expire > crontab
+kinit <username>
+crontab -e
+# minute hour day month day-of-week
+0 * * * * /root/kinit_all_users.sh
+```
+
+
+Commands
+------
+
+``` bash
+systemctl stop sssd ; rm -rf /var/lib/sss/db/* ; systemctl restart sssd
 ```

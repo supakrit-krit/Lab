@@ -71,7 +71,7 @@ ipa-server-install \
   --domain=ipa.test \
   --hostname=head.ipa.test \
   --setup-dns \
-  --no-forwarders \
+  --auto-forwarders \
   --mkhomedir \
   -p 'lab3password' \
   -a 'lab3password' -U
